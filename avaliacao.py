@@ -128,7 +128,7 @@ with col_editor:
                 "Nota": st.column_config.NumberColumn("Nota (0-10)", min_value=0.0, max_value=10.0, step=0.1, format="%.1f"),
             },
             hide_index=True,
-            use_container_width=True,
+            height=None,
             key=f"editor_{trimestre}_{disciplina}_{turma}",
         )
         submitted = st.form_submit_button("Salvar lançamentos", type="primary")
