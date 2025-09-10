@@ -37,7 +37,8 @@ def remover_acentos(texto):
     nfkd_form = unicodedata.normalize('NFKD', str(texto))
     return u"".join([c for c in nfkd_form if not unicodedata.combining(c)])
 
-@st.cache_data(ttl=60) # Cache por 60 segundos
+# Cache por 60 segundos
+@st.cache_data(ttl=60)
 def load_base():
     """ Carrega as abas Disciplinas, Turmas e Alunos da Planilha Google. """
     try:
