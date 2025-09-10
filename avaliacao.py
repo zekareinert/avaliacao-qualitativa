@@ -5,7 +5,7 @@ from io import BytesIO
 import unicodedata
 import gspread
 from gspread_dataframe import set_with_dataframe
-from xlsxwriter import Workbook
+import xlsxwriter
 
 # --- CONFIGURAÇÃO INICIAL E CONEXÃO COM GOOGLE SHEETS ---
 
