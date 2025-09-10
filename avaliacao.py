@@ -120,50 +120,48 @@ df_para_editar = pd.merge(alunos_turma_df, notas_atuais[["Aluno", "Nota"]], on="
 # 2. Exibir o editor de dados (st.data_editor)
 col_editor, _ = st.columns([2, 1])
 with col_editor:
-    edited_df = st.data_editor(
-        df_para_editar,
-        column_config={
-            "Aluno": st.column_config.TextColumn("Aluno", disabled=True),
-            "Nota": st.column_config.NumberColumn("Nota (0-10)", min_value=0.0, max_value=10.0, step=0.1, format="%.1f"),
-        },
-        hide_index=True,
-        use_container_width=True,
-        key=f"editor_{trimestre}_{disciplina}_{turma}"
-    )
+    with st.form(key='data_editor_form'):
+        edited_df = st.data_editor(
+            df_para_editar,
+            column_config={
+                "Aluno": st.column_config.TextColumn("Aluno", disabled=True),
+                "Nota": st.column_config.NumberColumn("Nota (0-10)", min_value=0.0, max_value=10.0, step=0.1, format="%.1f"),
+            },
+            hide_index=True,
+            use_container_width=True,
+            key=f"editor_{trimestre}_{disciplina}_{turma}",
+            height=None
+        )
+        submitted = st.form_submit_button("Salvar lançamentos", type="primary")
 
 # --- BOTÕES DE AÇÃO ---
 st.markdown("---")
 col_a, col_b, col_c, col_d = st.columns(4)
 
-with col_a:
-    if st.button("Salvar lançamentos", use_container_width=True, type="primary"):
-        notas_inseridas = edited_df.dropna(subset=['Nota'])
-        rows_to_save = []
-        for _, row in notas_inseridas.iterrows():
-            rows_to_save.append({
-                "Trimestre": trimestre, "Disciplina": disciplina, "Turma": turma,
-                "Aluno": row["Aluno"], "Nota": float(row["Nota"]), "Timestamp": datetime.now().isoformat()
-            })
-        
-        new_df = pd.DataFrame(rows_to_save)
-        
-        # Lógica para atualizar a base de dados geral
-        mask = ~(
-            (notas_df_geral["Trimestre"] == trimestre) &
-            (notas_df_geral["Disciplina"] == disciplina) &
-            (notas_df_geral["Turma"] == turma)
-        )
-        df_mantido = notas_df_geral[mask]
-        df_final = pd.concat([df_mantido, new_df], ignore_index=True)
-        
-        save_notas(df_final)
-        st.success(f"{len(new_df)} lançamentos salvos/atualizados na base de dados central.")
-        st.cache_data.clear() # Limpa o cache para recarregar os dados na próxima ação
-        st.rerun()
-
-# --- GERAÇÃO DE RELATÓRIOS ---
-st.sidebar.markdown("---")
-st.sidebar.info("Lembre-se de salvar as alterações antes de gerar um relatório para garantir que os dados estejam atualizados.")
+if submitted:
+    notas_inseridas = edited_df.dropna(subset=['Nota'])
+    rows_to_save = []
+    for _, row in notas_inseridas.iterrows():
+        rows_to_save.append({
+            "Trimestre": trimestre, "Disciplina": disciplina, "Turma": turma,
+            "Aluno": row["Aluno"], "Nota": float(row["Nota"]), "Timestamp": datetime.now().isoformat()
+        })
+    
+    new_df = pd.DataFrame(rows_to_save)
+    
+    # Lógica para atualizar a base de dados geral
+    mask = ~(
+        (notas_df_geral["Trimestre"] == trimestre) &
+        (notas_df_geral["Disciplina"] == disciplina) &
+        (notas_df_geral["Turma"] == turma)
+    )
+    df_mantido = notas_df_geral[mask]
+    df_final = pd.concat([df_mantido, new_df], ignore_index=True)
+    
+    save_notas(df_final)
+    st.success(f"{len(new_df)} lançamentos salvos/atualizados na base de dados central.")
+    st.cache_data.clear() # Limpa o cache para recarregar os dados na próxima ação
+    st.rerun()
 
 with col_b:
     if st.button("Relatório (esta turma)", use_container_width=True):
