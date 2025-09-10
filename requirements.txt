@@ -2,4 +2,6 @@ streamlit
 pandas
 openpyxl
 gspread
+
 gspread-dataframe
+xlsxwriter
