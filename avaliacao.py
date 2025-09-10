@@ -130,7 +130,6 @@ with col_editor:
             hide_index=True,
             use_container_width=True,
             key=f"editor_{trimestre}_{disciplina}_{turma}",
-            height=None
         )
         submitted = st.form_submit_button("Salvar lançamentos", type="primary")
 
