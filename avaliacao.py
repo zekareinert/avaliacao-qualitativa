@@ -15,7 +15,7 @@ st.set_page_config(page_title="Avaliação Qualitativa", layout="wide")
 try:
     gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
     # Substitua 'Dados_Escola' pelo nome exato da sua Planilha Google
-    spreadsheet = gc.open("Dados_Escola")
+    spreadsheet = gc.open("dados_escola")
     ws_disciplinas = spreadsheet.worksheet("Disciplinas")
     ws_turmas = spreadsheet.worksheet("Turmas")
     ws_alunos = spreadsheet.worksheet("Alunos")
