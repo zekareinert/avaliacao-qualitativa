@@ -80,7 +80,7 @@ def save_notas(df_final):
 
 # --- INTERFACE DO STREAMLIT ---
 
-st.title("📊 Sistema de Avaliação Qualitativa (0–10)")
+st.title("📊 Sistema de Avaliação Qualitativa")
 st.write("Sistema centralizado para lançamento de notas qualitativas.")
 
 # Carrega os dados da base
