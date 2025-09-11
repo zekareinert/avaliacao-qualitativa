@@ -125,6 +125,8 @@ notas_atuais = notas_df_geral[
 ]
 
 df_para_editar = pd.merge(alunos_turma_df, notas_atuais[["Aluno", "Nota"]], on="Aluno", how="left")
+# CORREÇÃO: Converte a coluna 'Nota' para o tipo string antes de passar para o editor.
+df_para_editar['Nota'] = df_para_editar['Nota'].astype(str)
 
 # 2. Exibir o editor de dados (st.data_editor)
 col_editor, _ = st.columns([2, 1])
@@ -134,7 +136,7 @@ with col_editor:
             df_para_editar,
             column_config={
                 "Aluno": st.column_config.TextColumn("Aluno", disabled=True),
-                # Agora o tipo é texto para evitar a conversão automática do Streamlit
+                # O tipo é texto para evitar a conversão automática do Streamlit
                 "Nota": st.column_config.TextColumn("Nota (0-10)"),
             },
             hide_index=True,
