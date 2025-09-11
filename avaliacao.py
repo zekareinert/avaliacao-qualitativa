@@ -63,6 +63,14 @@ def load_notas():
         notas_df = pd.DataFrame(ws_notas.get_all_records())
         if notas_df.empty:
             return pd.DataFrame(columns=["Trimestre", "Disciplina", "Turma", "Aluno", "Nota", "Timestamp"])
+        
+        # CORREÇÃO: Garante que a coluna 'Nota' está no formato numérico correto para o cálculo.
+        if 'Nota' in notas_df.columns:
+            # Converte para string para garantir a substituição da vírgula
+            notas_df['Nota'] = notas_df['Nota'].astype(str).str.replace(',', '.', regex=False)
+            # Converte para numérico, tratando erros para valores inválidos
+            notas_df['Nota'] = pd.to_numeric(notas_df['Nota'], errors='coerce')
+            
         return notas_df
     except Exception as e:
         st.error(f"Erro ao carregar as notas: {e}")
