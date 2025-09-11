@@ -64,7 +64,7 @@ def load_notas():
         if notas_df.empty:
             return pd.DataFrame(columns=["Trimestre", "Disciplina", "Turma", "Aluno", "Nota", "Timestamp"])
         
-        # CORREÇÃO: Garante que a coluna 'Nota' está no formato numérico correto para o cálculo.
+        # Garante que a coluna 'Nota' está no formato numérico correto para o cálculo.
         if 'Nota' in notas_df.columns:
             # Converte para string para garantir a substituição da vírgula
             notas_df['Nota'] = notas_df['Nota'].astype(str).str.replace(',', '.', regex=False)
@@ -134,7 +134,8 @@ with col_editor:
             df_para_editar,
             column_config={
                 "Aluno": st.column_config.TextColumn("Aluno", disabled=True),
-                "Nota": st.column_config.NumberColumn("Nota (0-10)", min_value=0.0, max_value=10.0, step=0.1, format="%.1f"),
+                # Agora o tipo é texto para evitar a conversão automática do Streamlit
+                "Nota": st.column_config.TextColumn("Nota (0-10)"),
             },
             hide_index=True,
             key=f"editor_{trimestre}_{disciplina}_{turma}",
@@ -146,12 +147,12 @@ st.markdown("---")
 col_a, col_b, col_c, col_d = st.columns(4)
 
 if submitted:
+    # A lógica de processamento foi movida para aqui para garantir o formato correto
     notas_inseridas = edited_df.dropna(subset=['Nota'])
     rows_to_save = []
     for _, row in notas_inseridas.iterrows():
         try:
-            # CORREÇÃO: Converte a nota para string e substitui a vírgula por ponto, se houver.
-            # Esta é a parte mais crítica, pois garante que a conversão será feita corretamente
+            # Limpa e converte a nota para o formato correto
             nota_limpa = str(row["Nota"]).replace(',', '.')
             nota_final = float(nota_limpa)
 
