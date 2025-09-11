@@ -38,7 +38,6 @@ def remover_acentos(texto):
     nfkd_form = unicodedata.normalize('NFKD', str(texto))
     return u"".join([c for c in nfkd_form if not unicodedata.combining(c)])
 
-# Cache por 60 segundos
 @st.cache_data(ttl=60)
 def load_base():
     """ Carrega as abas Disciplinas, Turmas e Alunos da Planilha Google. """
@@ -91,22 +90,24 @@ def save_notas(df_final):
 st.title("📊 Sistema de Avaliação Qualitativa")
 st.write("Sistema centralizado para lançamento de notas qualitativas.")
 
-# Carrega os dados da base
-disciplinas, turmas, alunos_df = load_base()
+# 1. Carregar os dados base e notas no estado da sessão apenas uma vez
+if 'disciplinas' not in st.session_state:
+    st.session_state['disciplinas'], st.session_state['turmas'], st.session_state['alunos_df'] = load_base()
+if 'notas_df_geral' not in st.session_state:
+    st.session_state['notas_df_geral'] = load_notas()
 
-if not disciplinas or not turmas or alunos_df.empty:
-    st.warning("A base de dados (Google Sheets) está vazia ou incompleta. Preencha as abas 'Disciplinas', 'Turmas' e 'Alunos'.")
+# Se a conexão falhou, o script para no bloco try/except lá em cima.
+if not st.session_state['db_connection']:
     st.stop()
+
 
 # --- BARRA LATERAL COM FILTROS ---
 st.sidebar.header("Filtros de Seleção")
 trimestres = ["1º Trimestre", "2º Trimestre", "3º Trimestre"]
 trimestre = st.sidebar.selectbox("Selecione o trimestre", trimestres)
-disciplina = st.sidebar.selectbox("Selecione a disciplina", disciplinas)
-turma = st.sidebar.selectbox("Selecione a turma", turmas)
+disciplina = st.sidebar.selectbox("Selecione a disciplina", st.session_state['disciplinas'])
+turma = st.sidebar.selectbox("Selecione a turma", st.session_state['turmas'])
 
-# Carrega todas as notas
-notas_df_geral = load_notas()
 
 # --- LAYOUT PRINCIPAL ---
 st.header(f"Lançamento de notas")
@@ -114,14 +115,14 @@ st.subheader(f"_{trimestre} — {disciplina} — {turma}_")
 st.info("Clique na célula de nota para editar. Use Enter ou as setas do teclado para navegar.")
 
 # 1. Preparar os dados para o editor
-alunos_turma_df = alunos_df[alunos_df["Turma"] == turma][["Aluno"]].copy()
+alunos_turma_df = st.session_state['alunos_df'][st.session_state['alunos_df']["Turma"] == turma][["Aluno"]].copy()
 alunos_turma_df.sort_values(by="Aluno", key=lambda col: col.str.normalize('NFKD').str.encode('ascii', errors='ignore').str.decode('utf-8'), inplace=True)
 
 # Filtra as notas apenas para a visualização atual
-notas_atuais = notas_df_geral[
-    (notas_df_geral["Trimestre"] == trimestre) &
-    (notas_df_geral["Disciplina"] == disciplina) &
-    (notas_df_geral["Turma"] == turma)
+notas_atuais = st.session_state['notas_df_geral'][
+    (st.session_state['notas_df_geral']["Trimestre"] == trimestre) &
+    (st.session_state['notas_df_geral']["Disciplina"] == disciplina) &
+    (st.session_state['notas_df_geral']["Turma"] == turma)
 ]
 
 df_para_editar = pd.merge(alunos_turma_df, notas_atuais[["Aluno", "Nota"]], on="Aluno", how="left")
@@ -175,14 +176,15 @@ if submitted:
         
         # Lógica para atualizar a base de dados geral
         mask = ~(
-            (notas_df_geral["Trimestre"] == trimestre) &
-            (notas_df_geral["Disciplina"] == disciplina) &
-            (notas_df_geral["Turma"] == turma)
+            (st.session_state['notas_df_geral']["Trimestre"] == trimestre) &
+            (st.session_state['notas_df_geral']["Disciplina"] == disciplina) &
+            (st.session_state['notas_df_geral']["Turma"] == turma)
         )
-        df_mantido = notas_df_geral[mask]
+        df_mantido = st.session_state['notas_df_geral'][mask]
         df_final = pd.concat([df_mantido, new_df], ignore_index=True)
         
         save_notas(df_final)
+        st.session_state['notas_df_geral'] = df_final # Atualiza o estado da sessão com os novos dados
         st.success(f"{len(new_df)} lançamentos salvos/atualizados na base de dados central.")
         st.cache_data.clear() # Limpa o cache para recarregar os dados na próxima ação
         st.rerun()
@@ -190,12 +192,11 @@ if submitted:
 with col_b:
     if st.button("Relatório (esta turma)", use_container_width=True):
         st.info("Calculando médias para a turma...")
-        df_notas_salvas = load_notas()
         
-        alunos_list = alunos_df[alunos_df['Turma'] == turma]['Aluno'].tolist()
+        alunos_list = st.session_state['alunos_df'][st.session_state['alunos_df']['Turma'] == turma]['Aluno'].tolist()
         medias = []
         for aluno in sorted(alunos_list, key=remover_acentos):
-            df_al = df_notas_salvas[(df_notas_salvas['Aluno'] == aluno) & (df_notas_salvas['Trimestre'] == trimestre)]
+            df_al = st.session_state['notas_df_geral'][(st.session_state['notas_df_geral']['Aluno'] == aluno) & (st.session_state['notas_df_geral']['Trimestre'] == trimestre)]
             if df_al.empty:
                 medias.append({'Trimestre': trimestre, 'Turma': turma, 'Aluno': aluno, 'Média Qualitativa': None, 'Lançamentos': 0})
                 continue
@@ -222,14 +223,13 @@ with col_b:
 with col_c:
     if st.button("Relatório (geral do tri)", use_container_width=True):
         st.info("Calculando médias para todas as turmas...")
-        df_notas_salvas = load_notas()
         
         resultados = []
-        for _, row in alunos_df.iterrows():
+        for _, row in st.session_state['alunos_df'].iterrows():
             aluno = row['Aluno']
             turma_k = row['Turma']
             
-            df_al = df_notas_salvas[(df_notas_salvas['Aluno'] == aluno) & (df_notas_salvas['Trimestre'] == trimestre)]
+            df_al = st.session_state['notas_df_geral'][(st.session_state['notas_df_geral']['Aluno'] == aluno) & (st.session_state['notas_df_geral']['Trimestre'] == trimestre)]
             if df_al.empty:
                 resultados.append({'Trimestre': trimestre, 'Turma': turma_k, 'Aluno': aluno, 'Média Qualitativa': None, 'Lançamentos': 0})
                 continue
@@ -265,12 +265,13 @@ with col_d:
             st.warning(f"Confirma a exclusão das notas de **{disciplina}** ({trimestre}) para a turma **{turma}**?")
             if st.button("Confirmar Exclusão", key="confirm_delete_btn"):
                 mask_to_remove = (
-                    (notas_df_geral['Trimestre'] == trimestre) & 
-                    (notas_df_geral['Disciplina'] == disciplina) &
-                    (notas_df_geral['Turma'] == turma)
+                    (st.session_state['notas_df_geral']['Trimestre'] == trimestre) & 
+                    (st.session_state['notas_df_geral']['Disciplina'] == disciplina) &
+                    (st.session_state['notas_df_geral']['Turma'] == turma)
                 )
-                df_final = notas_df_geral[~mask_to_remove]
+                df_final = st.session_state['notas_df_geral'][~mask_to_remove]
                 save_notas(df_final)
+                st.session_state['notas_df_geral'] = df_final # Atualiza o estado da sessão
                 st.success("Notas excluídas com sucesso.")
                 st.cache_data.clear()
                 st.rerun()
