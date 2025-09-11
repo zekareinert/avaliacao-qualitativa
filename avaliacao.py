@@ -151,6 +151,7 @@ if submitted:
     for _, row in notas_inseridas.iterrows():
         try:
             # CORREÇÃO: Converte a nota para string e substitui a vírgula por ponto, se houver.
+            # Esta é a parte mais crítica, pois garante que a conversão será feita corretamente
             nota_limpa = str(row["Nota"]).replace(',', '.')
             nota_final = float(nota_limpa)
 
