@@ -141,26 +141,39 @@ if submitted:
     notas_inseridas = edited_df.dropna(subset=['Nota'])
     rows_to_save = []
     for _, row in notas_inseridas.iterrows():
-        rows_to_save.append({
-            "Trimestre": trimestre, "Disciplina": disciplina, "Turma": turma,
-            "Aluno": row["Aluno"], "Nota": float(row["Nota"]), "Timestamp": datetime.now().isoformat()
-        })
-    
-    new_df = pd.DataFrame(rows_to_save)
-    
-    # Lógica para atualizar a base de dados geral
-    mask = ~(
-        (notas_df_geral["Trimestre"] == trimestre) &
-        (notas_df_geral["Disciplina"] == disciplina) &
-        (notas_df_geral["Turma"] == turma)
-    )
-    df_mantido = notas_df_geral[mask]
-    df_final = pd.concat([df_mantido, new_df], ignore_index=True)
-    
-    save_notas(df_final)
-    st.success(f"{len(new_df)} lançamentos salvos/atualizados na base de dados central.")
-    st.cache_data.clear() # Limpa o cache para recarregar os dados na próxima ação
-    st.rerun()
+        try:
+            # CORREÇÃO: Converte a nota para string e substitui a vírgula por ponto, se houver.
+            nota_limpa = str(row["Nota"]).replace(',', '.')
+            nota_final = float(nota_limpa)
+
+            # Adiciona uma validação extra para garantir que a nota está no intervalo
+            if 0.0 <= nota_final <= 10.0:
+                rows_to_save.append({
+                    "Trimestre": trimestre, "Disciplina": disciplina, "Turma": turma,
+                    "Aluno": row["Aluno"], "Nota": nota_final, "Timestamp": datetime.now().isoformat()
+                })
+            else:
+                st.warning(f"A nota '{nota_final}' para o aluno '{row['Aluno']}' está fora do intervalo (0-10) e não foi salva.")
+
+        except (ValueError, TypeError):
+            st.warning(f"A nota inserida para o aluno '{row['Aluno']}' não é um número válido e não foi salva. Por favor, use um formato como '8.5' ou '8,5'.")
+
+    if rows_to_save:
+        new_df = pd.DataFrame(rows_to_save)
+        
+        # Lógica para atualizar a base de dados geral
+        mask = ~(
+            (notas_df_geral["Trimestre"] == trimestre) &
+            (notas_df_geral["Disciplina"] == disciplina) &
+            (notas_df_geral["Turma"] == turma)
+        )
+        df_mantido = notas_df_geral[mask]
+        df_final = pd.concat([df_mantido, new_df], ignore_index=True)
+        
+        save_notas(df_final)
+        st.success(f"{len(new_df)} lançamentos salvos/atualizados na base de dados central.")
+        st.cache_data.clear() # Limpa o cache para recarregar os dados na próxima ação
+        st.rerun()
 
 with col_b:
     if st.button("Relatório (esta turma)", use_container_width=True):
